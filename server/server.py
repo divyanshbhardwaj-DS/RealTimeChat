@@ -10,29 +10,34 @@ server.listen()
 
 clients = []
 
-
-def broadcast(message):
+def broadcast(message, sender):
     for client in clients:
-        try:
-            client.send(message)
-        except:
-            clients.remove(client)
+        if client != sender:
+            try:
+                client.send(message)
+            except:
+                clients.remove(client)
 
 
 def handle_client(client):
     while True:
         try:
             message = client.recv(1024)
+
             if not message:
                 break
-            broadcast(message)
+
+            print("📨", message.decode())
+
+            broadcast(message,client)
+
         except:
             break
 
-    client.close()
     if client in clients:
         clients.remove(client)
 
+    client.close()
 
 def receive():
     print(f"✅ Server Started on {HOST}:{PORT}")
