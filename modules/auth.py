@@ -7,26 +7,29 @@ def register_user(full_name, username, password):
     conn = connect()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM users WHERE username=?", (username,))
+    cursor.execute(
+        "SELECT id FROM users WHERE username=?",
+        (username,)
+    )
 
     if cursor.fetchone():
         conn.close()
-        return False, "Username already exists"
+        return False, "Username already exists."
 
-    hashed = hash_password(password)
-
-    cursor.execute(
-        """
-        INSERT INTO users(full_name,username,password_hash)
+    cursor.execute("""
+        INSERT INTO users
+        (full_name,username,password_hash)
         VALUES(?,?,?)
-        """,
-        (full_name, username, hashed)
-    )
+    """, (
+        full_name,
+        username,
+        hash_password(password)
+    ))
 
     conn.commit()
     conn.close()
 
-    return True, "Registration Successful"
+    return True, "Registration Successful."
 
 
 def login_user(username, password):
@@ -34,16 +37,17 @@ def login_user(username, password):
     conn = connect()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT password_hash FROM users WHERE username=?",
-        (username,)
-    )
+    cursor.execute("""
+        SELECT password_hash
+        FROM users
+        WHERE username=?
+    """, (username,))
 
-    user = cursor.fetchone()
+    row = cursor.fetchone()
 
     conn.close()
 
-    if user is None:
+    if row is None:
         return False
 
-    return verify_password(password, user[0])
+    return verify_password(password, row[0])
