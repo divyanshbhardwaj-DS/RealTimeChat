@@ -1,5 +1,6 @@
 import customtkinter as ctk
-
+from tkinter import messagebox
+from modules.auth import login_user
 # ---------------- Appearance ---------------- #
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -56,11 +57,32 @@ password_entry = ctk.CTkEntry(
 )
 password_entry.pack(pady=10)
 
+# Login fxn
+def login():
+
+    username = username_entry.get().strip()
+    password = password_entry.get()
+
+    if username == "" or password == "":
+        messagebox.showerror("Error", "Please enter username and password.")
+        return
+
+    if login_user(username, password):
+        messagebox.showinfo("Success", "Login Successful!")
+        app.destroy()
+
+        from client.dashboard import open_dashboard
+        open_dashboard(username)
+
+    else:
+        messagebox.showerror("Error", "Invalid username or password.")
+
 login_btn = ctk.CTkButton(
     right_frame,
     text="Login",
     width=320,
-    height=45
+    height=45,
+    command=login
 )
 login_btn.pack(pady=25)
 
@@ -71,5 +93,4 @@ register_label = ctk.CTkLabel(
     cursor="hand2"
 )
 register_label.pack()
-
 app.mainloop()
