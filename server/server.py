@@ -1,6 +1,6 @@
 import socket
 import threading
-
+from modules.chat import save_message
 HOST = "127.0.0.1"
 PORT = 5000
 
@@ -49,7 +49,11 @@ def remove_client(client):
         client.close()
     except:
         pass
-
+        save_message(
+            "System",
+            "Global",
+            f"🔴 {username} left the chat."
+        )
     send_online_users()
 
 
@@ -65,7 +69,7 @@ def handle_client(client):
             clients[client] = username
 
         print(f"🟢 {username} joined")
-
+    
         send_online_users()
 
         broadcast(
@@ -84,7 +88,16 @@ def handle_client(client):
 
             print(text)
 
-            broadcast(text, sender=client)
+            save_message(
+                username,
+                "Global",
+                text
+            )
+
+            broadcast(
+                text,
+                sender=client
+            )
 
     except Exception as e:
         print("ERROR:", e)
@@ -110,6 +123,9 @@ def start_server():
 
         thread.start()
 
-
 if __name__ == "__main__":
-    start_server()
+    try:
+        start_server()
+    except KeyboardInterrupt:
+        print("\n🛑 Server Stopped")
+        server.close()
