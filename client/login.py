@@ -1,103 +1,128 @@
 import customtkinter as ctk
 from tkinter import messagebox
+
 from modules.auth import login_user
-# ---------------- Appearance ---------------- #
+
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-# ---------------- Window ---------------- #
-app = ctk.CTk()
-app.title("RealTime Chat")
-app.geometry("900x550")
-app.resizable(False, False)
 
-# ---------------- Left Frame ---------------- #
-left_frame = ctk.CTkFrame(app, width=350, corner_radius=0)
-left_frame.pack(side="left", fill="y")
+class LoginWindow(ctk.CTk):
 
-title = ctk.CTkLabel(
-    left_frame,
-    text="💬\nRealTime Chat",
-    font=("Segoe UI", 30, "bold")
-)
-title.place(relx=0.5, rely=0.35, anchor="center")
+    def __init__(self):
+        super().__init__()
 
-subtitle = ctk.CTkLabel(
-    left_frame,
-    text="Connect with everyone.\nAnytime. Anywhere.",
-    font=("Segoe UI", 15)
-)
-subtitle.place(relx=0.5, rely=0.55, anchor="center")
+        self.title("RealTime Chat")
+        self.geometry("900x550")
+        self.resizable(False, False)
 
-# ---------------- Right Frame ---------------- #
-right_frame = ctk.CTkFrame(app, fg_color="transparent")
-right_frame.pack(side="right", fill="both", expand=True)
+        # ---------------- LEFT ---------------- #
 
-heading = ctk.CTkLabel(
-    right_frame,
-    text="Welcome Back 👋",
-    font=("Segoe UI", 28, "bold")
-)
-heading.pack(pady=(80, 20))
+        left = ctk.CTkFrame(self, width=350, corner_radius=0)
+        left.pack(side="left", fill="y")
 
-username_entry = ctk.CTkEntry(
-    right_frame,
-    width=320,
-    height=45,
-    placeholder_text="Username"
-)
-username_entry.pack(pady=10)
+        ctk.CTkLabel(
+            left,
+            text="💬\nRealTime Chat",
+            font=("Segoe UI", 30, "bold")
+        ).place(relx=0.5, rely=0.35, anchor="center")
 
-password_entry = ctk.CTkEntry(
-    right_frame,
-    width=320,
-    height=45,
-    placeholder_text="Password",
-    show="*"
-)
-password_entry.pack(pady=10)
+        ctk.CTkLabel(
+            left,
+            text="Connect with everyone.\nAnytime. Anywhere.",
+            font=("Segoe UI", 15)
+        ).place(relx=0.5, rely=0.55, anchor="center")
 
-def open_register():
-    app.destroy()
+        # ---------------- RIGHT ---------------- #
 
-    from client.register import app as register_app
-    register_app.mainloop()
+        right = ctk.CTkFrame(self, fg_color="transparent")
+        right.pack(side="right", fill="both", expand=True)
 
-# Login fxn
-def login():
+        ctk.CTkLabel(
+            right,
+            text="Welcome Back 👋",
+            font=("Segoe UI", 28, "bold")
+        ).pack(pady=(80, 20))
 
-    username = username_entry.get().strip()
-    password = password_entry.get()
+        self.username = ctk.CTkEntry(
+            right,
+            width=320,
+            height=45,
+            placeholder_text="Username"
+        )
+        self.username.pack(pady=10)
 
-    if username == "" or password == "":
-        messagebox.showerror("Error", "Please enter username and password.")
-        return
+        self.password = ctk.CTkEntry(
+            right,
+            width=320,
+            height=45,
+            placeholder_text="Password",
+            show="*"
+        )
+        self.password.pack(pady=10)
 
-    if login_user(username, password):
-        messagebox.showinfo("Success", "Login Successful!")
-        app.destroy()
+        ctk.CTkButton(
+            right,
+            text="Login",
+            width=320,
+            height=45,
+            command=self.login
+        ).pack(pady=25)
 
-        from client.dashboard import open_dashboard
-        open_dashboard(username)
+        register = ctk.CTkLabel(
+            right,
+            text="New User? Register",
+            text_color="#4EA1FF",
+            cursor="hand2"
+        )
+        register.pack()
 
-    else:
-        messagebox.showerror("Error", "Invalid username or password.")
+        register.bind("<Button-1>", self.open_register)
 
-login_btn = ctk.CTkButton(
-    right_frame,
-    text="Login",
-    width=320,
-    height=45,
-    command=login
-)
-login_btn.pack(pady=25)
+    # ---------------- LOGIN ---------------- #
 
-register_label = ctk.CTkLabel(
-    right_frame,
-    text="New User? Register",
-    text_color="#4EA1FF",
-    cursor="hand2"
-)
-register_label.pack()
-register_label.bind("<Button-1>", lambda e: open_register())
-app.mainloop()
+    def login(self):
+
+        username = self.username.get().strip()
+        password = self.password.get()
+
+        if username == "" or password == "":
+            messagebox.showerror(
+                "Error",
+                "Please enter username and password."
+            )
+            return
+
+        if login_user(username, password):
+
+            self.destroy()
+
+            from client.dashboard import open_dashboard
+
+            open_dashboard(username)
+
+        else:
+
+            messagebox.showerror(
+                "Error",
+                "Invalid username or password."
+            )
+
+    # ---------------- REGISTER ---------------- #
+
+    def open_register(self, event=None):
+
+        self.destroy()
+
+        from client.register import RegisterWindow
+
+        RegisterWindow().mainloop()
+
+
+def start_login():
+
+    LoginWindow().mainloop()
+
+
+if __name__ == "__main__":
+    start_login()

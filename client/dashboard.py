@@ -3,6 +3,7 @@ import socket
 import threading
 from datetime import datetime
 
+from client.components import ChatBubble, OnlineUser
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -14,115 +15,76 @@ class Dashboard(ctk.CTk):
 
         super().__init__()
 
-
         self.username = username
 
+        self.title(f"RealTime Chat - {username}")
+        self.geometry("1100x650")
+        self.minsize(1000, 600)
 
-        self.title(
-            f"RealTime Chat - {username}"
-        )
+        # ---------------- SOCKET ---------------- #
 
-        self.geometry(
-            "1000x600"
-        )
-
-
-
-        # ---------- Socket ----------
-
-        HOST = "127.0.0.1"
-        PORT = 5000
-
+        self.HOST = "127.0.0.1"
+        self.PORT = 5000
 
         self.client = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM
         )
 
+        self.client.connect((self.HOST, self.PORT))
+        self.client.sendall(username.encode())
 
-        self.client.connect(
-            (HOST, PORT)
-        )
-
-
-        self.client.sendall(
-            username.encode()
-        )
-
-
-
-        # ---------- Header ----------
+        # ---------------- HEADER ---------------- #
 
         header = ctk.CTkFrame(
             self,
-            height=60
+            height=60,
+            corner_radius=0
         )
+        header.pack(fill="x")
 
-        header.pack(
-            fill="x"
-        )
-
-
-        title = ctk.CTkLabel(
+        self.title_label = ctk.CTkLabel(
             header,
-            text=f"💬 RealTime Chat | {username}",
-            font=("Segoe UI",22,"bold")
+            text=f"💬 RealTime Chat   |   {username}",
+            font=("Segoe UI", 22, "bold")
         )
 
-        title.pack(
+        self.title_label.pack(
+            side="left",
+            padx=20,
             pady=15
         )
 
-
-
-        # ---------- Main ----------
-
-        main = ctk.CTkFrame(
-            self
+        self.logout_btn = ctk.CTkButton(
+            header,
+            text="Logout",
+            width=120,
+            command=self.logout
         )
 
-        main.pack(
-            fill="both",
-            expand=True
+        self.logout_btn.pack(
+            side="right",
+            padx=20
         )
 
+        # ---------------- BODY ---------------- #
 
+        body = ctk.CTkFrame(self)
+        body.pack(fill="both", expand=True)
 
-        # ---------- Chat Area ----------
-
-
-        self.chat_frame = ctk.CTkScrollableFrame(
-            main,
-            width=700,
-            height=420
-        )
-
-        self.chat_frame.pack(
-            side="left",
-            fill="both",
-            expand=True,
-            padx=10,
-            pady=10
-        )
-
-
-
-        # ---------- Online Users ----------
-
+        # ---------------- USERS ---------------- #
 
         self.users_frame = ctk.CTkFrame(
-            main,
+            body,
             width=220
         )
 
-
         self.users_frame.pack(
-            side="right",
+            side="left",
             fill="y",
             padx=10,
             pady=10
         )
-
 
         self.users_title = ctk.CTkLabel(
             self.users_frame,
@@ -130,262 +92,137 @@ class Dashboard(ctk.CTk):
             font=("Segoe UI",18,"bold")
         )
 
-
         self.users_title.pack(
             pady=15
         )
 
+        # ---------------- CHAT ---------------- #
 
-
-        # ---------- Bottom ----------
-
-
-        bottom = ctk.CTkFrame(
-            self
+        self.chat_container = ctk.CTkScrollableFrame(
+            body,
+            corner_radius=10
         )
 
-        bottom.pack(
-            fill="x",
+        self.chat_container.pack(
+            side="left",
+            fill="both",
+            expand=True,
             padx=10,
             pady=10
         )
 
+        # ---------------- BOTTOM ---------------- #
 
+        bottom = ctk.CTkFrame(self)
+        bottom.pack(fill="x")
 
         self.message_entry = ctk.CTkEntry(
             bottom,
-            width=750,
-            placeholder_text="Type message..."
+            placeholder_text="Type message...",
+            height=42
         )
-
 
         self.message_entry.pack(
             side="left",
-            padx=10
+            fill="x",
+            expand=True,
+            padx=15,
+            pady=15
         )
-
 
         self.message_entry.bind(
             "<Return>",
-            lambda event:self.send_message()
+            lambda e: self.send_message()
         )
-
-
 
         send_btn = ctk.CTkButton(
             bottom,
             text="Send",
-            command=self.send_message,
-            width=120
+            width=120,
+            command=self.send_message
         )
-
 
         send_btn.pack(
-            side="right"
+            side="right",
+            padx=15
         )
-
-
-
-        # ---------- Receive Thread ----------
-
 
         threading.Thread(
             target=self.receive_messages,
             daemon=True
         ).start()
-
-
-
-    # ---------- Add Message ----------
-
-
-    def add_message(
-        self,
-        message,
-        sender="other"
-    ):
-
-
-        bubble = ctk.CTkFrame(
-            self.chat_frame,
-            corner_radius=15,
-            fg_color=("#2563eb" if sender == "you" else "#3a3a3a")
+        self.protocol(
+            "WM_DELETE_WINDOW",
+            self.on_close
         )
-
-
-        if sender=="you":
-
-            bubble.pack(
-                anchor="e",
-                pady=5,
-                padx=10
-            )
-
-        else:
-
-            bubble.pack(
-                anchor="w",
-                pady=5,
-                padx=10
-            )
-
-
-
-        label = ctk.CTkLabel(
-            bubble,
-            text=message,
-            font=("Segoe UI",14)
-        )
-
-
-        label.pack(
-            padx=15,
-            pady=8
-        )
-        self.chat_frame._parent_canvas.yview_moveto(1.0)
-
-
-
-    # ---------- Update Users ----------
-
-
-    def update_users(
-        self,
-        users
-    ):
-
-
-        for widget in self.users_frame.winfo_children():
-
-            if widget != self.users_title:
-
-                widget.destroy()
-
-
-
-        if users:
-
-
-            for user in users.split(","):
-
-
-                if user:
-
-
-                    label = ctk.CTkLabel(
-                        self.users_frame,
-                        text="🟢 "+user,
-                        font=("Segoe UI",14)
-                    )
-
-
-                    label.pack(
-                        pady=5
-                    )
-
-
-
-    # ---------- Send Message ----------
-
+            # ---------------- SEND MESSAGE ---------------- #
 
     def send_message(self):
 
-
-        message = self.message_entry.get()
-
+        message = self.message_entry.get().strip()
 
         if message == "":
-
             return
 
+        current_time = datetime.now().strftime("%I:%M %p")
 
-
-        time = datetime.now().strftime(
-            "%I:%M %p"
-        )
-
-
-        full_message = (
-            f"[{time}] {self.username}: {message}"
-        )
-
-
+        full_message = f"[{current_time}] {self.username}: {message}"
 
         try:
+            self.client.sendall(full_message.encode())
 
-            self.client.sendall(
-                full_message.encode()
-            )
-
-
-            self.add_message(
+            bubble = ChatBubble(
+                self.chat_container,
                 full_message,
-                "you"
+                own=True
             )
 
+            bubble.pack(
+                anchor="e",
+                padx=10,
+                pady=5
+            )
 
-        except:
+            self.chat_container._parent_canvas.yview_moveto(1.0)
 
-            pass
+        except Exception as e:
+            print(e)
 
-
-
-        self.message_entry.delete(
-            0,
-            "end"
-        )
+        self.message_entry.delete(0, "end")
 
 
 
-    # ---------- Receive Messages ----------
-
+    # ---------------- RECEIVE ---------------- #
 
     def receive_messages(self):
 
-
         while True:
-
 
             try:
 
-
-                message = self.client.recv(
-                    1024
-                ).decode()
-
-
+                message = self.client.recv(1024).decode()
 
                 if not message:
-
                     break
 
-
-
-                if message.startswith(
-                    "USERS:"
-                ):
-
+                if message.startswith("USERS:"):
 
                     users = message.replace(
                         "USERS:",
                         ""
                     )
 
+                    self.after(
+                        0,
+                        lambda u=users: self.update_users(u)
+                    )
+
+                else:
 
                     self.after(
                         0,
-                        lambda:self.update_users(users)
+                        lambda m=message: self.add_message(m)
                     )
-
-
-                else:
-                        if not message.startswith(f"[") or f"{self.username}:" not in message:
-                            self.after(
-                                0,
-                                lambda m=message: self.add_message(m, "other")
-                        )
-
-
 
             except Exception as e:
 
@@ -395,9 +232,92 @@ class Dashboard(ctk.CTk):
 
 
 
+    # ---------------- ADD MESSAGE ---------------- #
+
+    def add_message(self, message):
+
+        bubble = ChatBubble(
+            self.chat_container,
+            message,
+            own=False
+        )
+
+        bubble.pack(
+            anchor="w",
+            padx=10,
+            pady=5
+        )
+
+        self.chat_container._parent_canvas.yview_moveto(1.0)
+
+
+
+    # ---------------- ONLINE USERS ---------------- #
+
+    def update_users(self, users):
+
+        for widget in self.users_frame.winfo_children():
+
+            if widget != self.users_title:
+                widget.destroy()
+
+        if users.strip() == "":
+            return
+
+        for user in users.split(","):
+
+            user = user.strip()
+
+            if user == "":
+                continue
+
+            item = OnlineUser(
+                self.users_frame,
+                user
+            )
+
+            item.pack(
+                fill="x",
+                pady=2
+            )
+
+                # ---------------- LOGOUT ---------------- #
+
+    def logout(self):
+
+        try:
+            self.client.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+
+        try:
+            self.client.close()
+        except:
+            pass
+
+        self.destroy()
+
+        from client.login import start_login
+        start_login()
+
+
+
+    # ---------------- WINDOW CLOSE ---------------- #
+
+    def on_close(self):
+
+        try:
+            self.client.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+
+        try:
+            self.client.close()
+        except:
+            pass
+
+        self.destroy()
+
 
 def open_dashboard(username):
-
-    app = Dashboard(username)
-
-    app.mainloop()
+    Dashboard(username).mainloop()

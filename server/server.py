@@ -1,240 +1,115 @@
 import socket
 import threading
 
-
 HOST = "127.0.0.1"
 PORT = 5000
 
-
-server = socket.socket(
-    socket.AF_INET,
-    socket.SOCK_STREAM
-)
-
-server.setsockopt(
-    socket.SOL_SOCKET,
-    socket.SO_REUSEADDR,
-    1
-)
-
-server.bind(
-    (HOST, PORT)
-)
-
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((HOST, PORT))
 server.listen()
 
-
 clients = {}
-
 lock = threading.Lock()
 
 
-
-# ---------- Send Online Users ----------
-
-def send_user_list():
-
+def send_online_users():
+    """Send updated online users list to everyone."""
     with lock:
-
-        users = list(clients.values())
-
-
-        print(
-            "ONLINE USERS:",
-            users
-        )
-
-
-        data = "USERS:" + ",".join(users)
-
+        usernames = ",".join(clients.values())
+        data = f"USERS:{usernames}"
 
         for client in list(clients.keys()):
-
             try:
-
-                client.sendall(
-                    data.encode()
-                )
-
-
+                client.sendall(data.encode())
             except:
-
                 remove_client(client)
 
-
-
-# ---------- Broadcast Message ----------
 
 def broadcast(message, sender=None):
+    """Send message to all clients except sender."""
+    with lock:
+        for client in list(clients.keys()):
+            if client != sender:
+                try:
+                    client.sendall(message.encode())
+                except:
+                    remove_client(client)
 
-    for client in list(clients.keys()):
-
-        if client != sender:
-
-            try:
-
-                client.sendall(
-                    message
-                )
-
-
-            except:
-
-                remove_client(client)
-
-
-
-# ---------- Remove Client ----------
 
 def remove_client(client):
-
+    """Disconnect client safely."""
     with lock:
-
         if client in clients:
-
             username = clients[client]
-
-            print(
-                f"🔴 {username} disconnected"
-            )
-
-
+            print(f"🔴 {username} disconnected")
             del clients[client]
 
-
     try:
-
         client.close()
-
     except:
-
         pass
 
+    send_online_users()
 
-    send_user_list()
-
-
-
-# ---------- Handle Each Client ----------
 
 def handle_client(client):
-
     try:
+        username = client.recv(1024).decode().strip()
 
-        # receive username
-
-        username = client.recv(
-            1024
-        ).decode().strip()
-
-
-        if not username:
-
+        if username == "":
             client.close()
             return
 
-
-
         with lock:
-
             clients[client] = username
 
+        print(f"🟢 {username} joined")
 
-
-        print(
-            f"🟢 {username} joined"
-        )
-
-
-        # update online users
-
-        send_user_list()
-
-
-
-        # notify others
+        send_online_users()
 
         broadcast(
-            f"🟢 {username} joined the chat".encode(),
-            client
+            f"🟢 {username} joined the chat.",
+            sender=client
         )
-
-
 
         while True:
 
+            data = client.recv(1024)
 
-            message = client.recv(
-                1024
-            )
-
-
-            if not message:
-
+            if not data:
                 break
 
+            text = data.decode()
 
+            print(text)
 
-            print(
-                f"{username}: {message.decode()}"
-            )
-
-
-
-            broadcast(
-                message,
-                client
-            )
-
-
+            broadcast(text, sender=client)
 
     except Exception as e:
-
-        print(
-            "Error:",
-            e
-        )
-
-
+        print("ERROR:", e)
 
     finally:
-
         remove_client(client)
 
 
-
-# ---------- Start Server ----------
-
-def receive():
-
-    print(
-        f"✅ Server Started on {HOST}:{PORT}"
-    )
-
+def start_server():
+    print(f"✅ Server Started on {HOST}:{PORT}")
 
     while True:
 
-
         client, address = server.accept()
 
-
-        print(
-            f"🔗 Connected: {address}"
-        )
-
+        print(f"🔗 Connected : {address}")
 
         thread = threading.Thread(
             target=handle_client,
-            args=(client,)
+            args=(client,),
+            daemon=True
         )
-
-
-        thread.daemon = True
 
         thread.start()
 
 
-
 if __name__ == "__main__":
-
-    receive()
+    start_server()
