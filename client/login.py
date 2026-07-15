@@ -57,6 +57,12 @@ password_entry = ctk.CTkEntry(
 )
 password_entry.pack(pady=10)
 
+def open_register():
+    app.destroy()
+
+    from client.register import app as register_app
+    register_app.mainloop()
+
 # Login fxn
 def login():
 
@@ -93,4 +99,5 @@ register_label = ctk.CTkLabel(
     cursor="hand2"
 )
 register_label.pack()
+register_label.bind("<Button-1>", lambda e: open_register())
 app.mainloop()
